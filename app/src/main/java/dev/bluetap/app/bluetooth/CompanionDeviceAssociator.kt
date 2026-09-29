@@ -26,14 +26,15 @@ sealed interface AssociationOutcome {
 /**
  * Wraps Android's [CompanionDeviceManager]: starts the system device chooser,
  * reads its result and lists BlueTap's existing associations.
+ * Retained for future optional association; the normal picker uses BondedDeviceProvider.
  *
  * Only association is handled here. Nothing in this class connects to,
  * disconnects from or bonds with a device.
  *
  * API differences:
  * - Android 13+ (API 33): associations have an ID and are described by [AssociationInfo].
- * - Android 12/12L (API 31-32): associations are only identified by MAC address, and
- *   reading the chosen device's name needs the `BLUETOOTH_CONNECT` runtime permission.
+ * - Android 12/12L (API 31-32): associations are only identified by MAC address.
+ * Reading a Bluetooth device's name needs `BLUETOOTH_CONNECT` on all supported APIs.
  */
 class CompanionDeviceAssociator(private val context: Context) {
 
@@ -45,11 +46,10 @@ class CompanionDeviceAssociator(private val context: Context) {
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP)
 
     /**
-     * True on Android 12/12L when `BLUETOOTH_CONNECT` has not been granted yet. It is
-     * only used to read the chosen device's name; association works without it.
+     * True when `BLUETOOTH_CONNECT` has not been granted yet. It is only used to
+     * read the device's name; association works without it.
      */
-    fun shouldRequestConnectPermission(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && !hasConnectPermission()
+    fun shouldRequestConnectPermission(): Boolean = !hasConnectPermission()
 
     /**
      * Asks the system to prepare its device chooser. [onChooserReady] receives an
@@ -106,7 +106,10 @@ class CompanionDeviceAssociator(private val context: Context) {
         } else {
             @Suppress("DEPRECATION")
             data?.getParcelableExtra<BluetoothDevice>(CompanionDeviceManager.EXTRA_DEVICE)
-                ?.let { AssociatedDevice(null, it.address, nameOf(it) ?: it.address) }
+                ?.let {
+                    val name = nameOf(it) ?: it.address
+                    AssociatedDevice(null, it.address, name)
+                }
         }
         return device?.let { AssociationOutcome.Associated(it) } ?: AssociationOutcome.Failed(null)
     }
@@ -118,15 +121,17 @@ class CompanionDeviceAssociator(private val context: Context) {
     fun currentAssociations(): List<AssociatedDevice>? {
         val manager = manager ?: return null
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val associations = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 manager.myAssociations.map { it.toAssociatedDevice() }
             } else {
                 @Suppress("DEPRECATION")
                 val addresses = manager.associations
                 addresses.map { address ->
-                    AssociatedDevice(null, address, remoteDeviceName(address) ?: address)
+                    val name = remoteDeviceName(address) ?: address
+                    AssociatedDevice(null, address, name)
                 }
             }
+            deduplicateAssociations(associations)
         } catch (e: RuntimeException) {
             null
         }
@@ -134,19 +139,27 @@ class CompanionDeviceAssociator(private val context: Context) {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun AssociationInfo.toAssociatedDevice(): AssociatedDevice {
-        val address = deviceMacAddress?.toString()?.uppercase()
-        val name = displayName?.toString()?.takeIf { it.isNotBlank() }
-            ?: address
-            ?: context.getString(R.string.unknown_device)
+        val rawAddress = deviceMacAddress?.toString()
+        val address = rawAddress?.uppercase()
+        val name = resolveAssociationName(
+            displayName?.toString(), address, context.getString(R.string.unknown_device),
+            ::remoteDeviceName,
+        )
         return AssociatedDevice(associationId = id, macAddress = address, name = name)
     }
 
-    private fun remoteDeviceName(address: String): String? = try {
-        context.getSystemService(BluetoothManager::class.java)?.adapter
-            ?.getRemoteDevice(address)
-            ?.let(::nameOf)
-    } catch (e: IllegalArgumentException) {
-        null
+    private fun remoteDeviceName(address: String): String? {
+        if (!hasConnectPermission()) return null
+        return try {
+            context.getSystemService(BluetoothManager::class.java)?.adapter
+                ?.takeIf { it.isEnabled }
+                ?.getRemoteDevice(address)
+                ?.let(::nameOf)
+        } catch (e: IllegalArgumentException) {
+            null
+        } catch (e: SecurityException) {
+            null
+        }
     }
 
     private fun nameOf(device: BluetoothDevice): String? {
@@ -162,3 +175,13 @@ class CompanionDeviceAssociator(private val context: Context) {
         context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) ==
             PackageManager.PERMISSION_GRANTED
 }
+
+internal fun resolveAssociationName(
+    displayName: String?,
+    address: String?,
+    unknownName: String,
+    remoteDeviceName: (String) -> String?,
+): String = displayName?.takeIf { it.isNotBlank() }
+    ?: address?.let(remoteDeviceName)?.takeIf { it.isNotBlank() }
+    ?: address
+    ?: unknownName

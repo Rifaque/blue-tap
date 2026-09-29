@@ -2,8 +2,8 @@
 
 One-tap Android home-screen widgets for connecting and disconnecting paired Bluetooth devices.
 
-> **Status: early development.** You can associate a Bluetooth device with BlueTap and
-> assign it to a widget, but BlueTap cannot connect to or disconnect from devices yet.
+> **Status: early development.** You can select an already-paired Bluetooth device
+> for each widget, but BlueTap cannot connect to or disconnect from devices yet.
 
 ## What BlueTap will do
 
@@ -24,25 +24,37 @@ APIs, reflection, root, Shizuku, Accessibility services or vendor-specific proto
 
 ## What exists today
 
-- **Device association** through Android's Companion Device Manager. BlueTap opens the
-  system device chooser, and the chosen device is associated with the app. BlueTap does
-  not pair, bond or connect to anything itself.
+- **Paired device picker** using Android's bonded Bluetooth device list. Names fall
+  back from the friendly name to the alias, then the MAC address. Devices are sorted
+  by name and deduplicated by address. Pair new devices in Android's Bluetooth settings.
 - **Per-widget configuration.** Adding a BlueTap widget opens a setup screen where you
-  pick an associated device or add a new one. Each widget stores its own device, so
+  pick a paired device. Each widget stores its own MAC address and display name, so
   several widgets can point to different devices. Tapping a widget lets you change it.
 - **Widget states:** "No device selected", the assigned device's name, or
-  "Device unavailable" if its association was removed. The widget does not show a
+  "Device unavailable" if it is no longer paired or the list cannot be read. The widget does not show a
   connection status yet, because reading it is not implemented.
+- **Companion Device Manager code is retained** for a possible future association
+  step, but is not called by normal setup or widget rendering. No association is
+  created automatically. Temporary investigation logs and reflection have been removed.
 - A `BluetoothConnector` interface and `ConnectionState` model that keep the UI and
   widget independent of Android Bluetooth classes.
 - A placeholder `Android17BluetoothConnector` that is **not implemented** and not used.
 
 ### Permissions
 
-- `android.software.companion_device_setup` feature: required for device association.
-- `BLUETOOTH_CONNECT`, **Android 12/12L only**: needed there to read the chosen device's
-  name. Android 13+ gets the name from the association, so the permission is not
-  requested. BlueTap does not request location or scanning permissions.
+- `BLUETOOTH_CONNECT`, Android 12+: requested to read bonded devices and their names.
+  Permission denial and Bluetooth-off states have setup guidance. The list refreshes
+  when returning from Settings or tapping Refresh devices.
+- `android.software.companion_device_setup` is an **optional feature**, retained for
+  future CDM use. BlueTap does not request location or scanning permissions.
+
+### Existing development widgets
+
+Saved MAC addresses and names are reused. Old CDM association IDs are ignored and
+removed when a widget is saved again. If the saved address is not in the bonded list
+(including a different nearby endpoint for the same earbuds), the widget shows
+"Device unavailable" until you select the paired device again. Entries without a
+saved address need configuration again. BlueTap does not guess address mappings.
 
 ## Project structure
 
@@ -50,7 +62,7 @@ APIs, reflection, root, Shizuku, Accessibility services or vendor-specific proto
 app/src/main/java/dev/bluetap/app/
 ├── ui/          Main activity, device setup screen and Compose theme
 ├── widget/      Glance widget, receiver, configuration activity and per-widget storage
-└── bluetooth/   Companion Device Manager association, AssociatedDevice,
+└── bluetooth/   BondedDeviceProvider, BondedDevice, optional CDM support,
                  BluetoothConnector interface and ConnectionState
     └── android17/   Placeholder for the future API 37 implementation
 ```

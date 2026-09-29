@@ -9,7 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.ui.res.stringResource
 import dev.bluetap.app.R
-import dev.bluetap.app.bluetooth.AssociatedDevice
+import dev.bluetap.app.bluetooth.BondedDevice
 import dev.bluetap.app.ui.BlueTapTheme
 import dev.bluetap.app.ui.DeviceSetupScreen
 
@@ -48,13 +48,13 @@ class WidgetConfigActivity : ComponentActivity() {
                     title = stringResource(R.string.config_title),
                     description = stringResource(R.string.config_description),
                     onDeviceSelected = ::assignDevice,
-                    onDeviceAssociated = ::assignDevice,
+                    onDevicesRefreshed = { refreshAllWidgets(this@WidgetConfigActivity) },
                 )
             }
         }
     }
 
-    private suspend fun assignDevice(device: AssociatedDevice) {
+    private suspend fun assignDevice(device: BondedDevice) {
         WidgetConfigStore.from(this).save(appWidgetId, device)
         refreshWidget(this, appWidgetId)
         configured = true

@@ -2,33 +2,28 @@ package dev.bluetap.app.widget
 
 import android.content.Context
 import android.content.SharedPreferences
-import dev.bluetap.app.bluetooth.AssociatedDevice
+import dev.bluetap.app.bluetooth.BondedDevice
+import dev.bluetap.app.bluetooth.mapBondedDevice
 
-/** Stores which [AssociatedDevice] each BlueTap widget (by `appWidgetId`) is assigned to. */
+/** Stores the bonded device address and display name separately for each widget ID. */
 class WidgetConfigStore(private val prefs: SharedPreferences) {
 
-    fun save(appWidgetId: Int, device: AssociatedDevice) {
-        val editor = prefs.edit()
-        val idKey = key(appWidgetId, ASSOCIATION_ID)
-        if (device.associationId != null) {
-            editor.putInt(idKey, device.associationId)
-        } else {
-            editor.remove(idKey)
-        }
-        editor
-            .putString(key(appWidgetId, MAC_ADDRESS), device.macAddress)
-            .putString(key(appWidgetId, NAME), device.name)
+    fun save(appWidgetId: Int, device: BondedDevice) {
+        val normalized = mapBondedDevice(device.macAddress, device.name, null)
+        prefs.edit()
+            .remove(key(appWidgetId, ASSOCIATION_ID))
+            .putString(key(appWidgetId, MAC_ADDRESS), normalized.macAddress)
+            .putString(key(appWidgetId, NAME), normalized.name)
             .apply()
     }
 
     /** The device assigned to [appWidgetId], or `null` if the widget is not configured. */
-    fun load(appWidgetId: Int): AssociatedDevice? {
-        val name = prefs.getString(key(appWidgetId, NAME), null) ?: return null
-        val idKey = key(appWidgetId, ASSOCIATION_ID)
-        val associationId = if (prefs.contains(idKey)) prefs.getInt(idKey, 0) else null
+    fun load(appWidgetId: Int): BondedDevice? {
+        // Reuse legacy MAC/name fields. Never infer a bonded address from a CDM ID or name.
         val macAddress = prefs.getString(key(appWidgetId, MAC_ADDRESS), null)
-        if (associationId == null && macAddress == null) return null
-        return AssociatedDevice(associationId, macAddress, name)
+            ?.takeIf { it.isNotBlank() } ?: return null
+        val name = prefs.getString(key(appWidgetId, NAME), null)
+        return mapBondedDevice(macAddress, name, null)
     }
 
     fun delete(appWidgetId: Int) {

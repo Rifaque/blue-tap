@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Device association uses the system Companion Device Manager. -->
+    <!-- Retained for optional future association; normal setup uses bonded Bluetooth devices. -->
     <uses-feature
         android:name="android.software.companion_device_setup"
-        android:required="true" />
+        android:required="false" />
 
     <!--
-        Only needed on Android 12/12L, where Companion Device Manager does not return
-        the device name and BluetoothDevice.getName() requires this permission.
+        Required to read bonded devices and their names on Android 12+.
     -->
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_CONNECT"
-        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <application
         android:allowBackup="true"
