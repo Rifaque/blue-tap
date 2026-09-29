@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">BlueTap</string>
+    <string name="app_description">BlueTap will provide one-tap home-screen widgets for connecting and disconnecting your paired Bluetooth audio devices.</string>
+    <string name="app_setup_coming_later">Bluetooth device configuration will be added in a later version.</string>
+
+    <string name="widget_name">BlueTap</string>
+    <string name="widget_description">Connect or disconnect a paired Bluetooth device with one tap</string>
+    <string name="widget_no_device">No device selected</string>
+    <string name="widget_set_up_device">Set up device</string>
+</resources>
