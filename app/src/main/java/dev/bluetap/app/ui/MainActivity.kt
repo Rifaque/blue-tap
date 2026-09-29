@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import dev.bluetap.app.R
@@ -16,15 +15,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
-            // Lets widgets notice associations that were removed in system settings.
-            LaunchedEffect(Unit) { refreshAllWidgets(context) }
-
             BlueTapTheme {
                 DeviceSetupScreen(
                     title = stringResource(R.string.app_name),
                     description = stringResource(R.string.app_description),
                     onDeviceSelected = null,
-                    onDeviceAssociated = { refreshAllWidgets(context) },
+                    onDevicesRefreshed = { refreshAllWidgets(context) },
                     footer = stringResource(R.string.main_widget_hint),
                 )
             }

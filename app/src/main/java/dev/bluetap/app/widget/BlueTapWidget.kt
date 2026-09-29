@@ -35,7 +35,8 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import dev.bluetap.app.R
-import dev.bluetap.app.bluetooth.CompanionDeviceAssociator
+import dev.bluetap.app.bluetooth.BondedDeviceProvider
+import dev.bluetap.app.bluetooth.BondedDeviceResult
 
 /**
  * Home-screen widget showing the device assigned to it. It does not connect to or
@@ -61,13 +62,13 @@ class BlueTapWidget : GlanceAppWidget() {
 
 private val RefreshKey = longPreferencesKey("refresh")
 
-/** Re-reads the widget's configuration and association status and redraws it. */
+/** Re-reads the widget's configuration and bonded device availability and redraws it. */
 suspend fun refreshWidget(context: Context, appWidgetId: Int) {
     val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
     refreshWidget(context, glanceId)
 }
 
-/** Redraws every BlueTap widget, e.g. to pick up associations removed in system settings. */
+/** Redraws every BlueTap widget, e.g. after a device is unpaired in system settings. */
 suspend fun refreshAllWidgets(context: Context) {
     GlanceAppWidgetManager(context).getGlanceIds(BlueTapWidget::class.java)
         .forEach { refreshWidget(context, it) }
@@ -81,7 +82,8 @@ private suspend fun refreshWidget(context: Context, glanceId: GlanceId) {
 private fun loadWidgetState(context: Context, appWidgetId: Int): WidgetState =
     resolveWidgetState(
         saved = WidgetConfigStore.from(context).load(appWidgetId),
-        currentAssociations = CompanionDeviceAssociator(context).currentAssociations(),
+        bondedDevices = (BondedDeviceProvider(context).currentDevices() as? BondedDeviceResult.Available)
+            ?.devices,
     )
 
 private fun configureIntent(context: Context, appWidgetId: Int): Intent =

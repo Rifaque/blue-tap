@@ -1,29 +1,31 @@
 package dev.bluetap.app.widget
 
-import dev.bluetap.app.bluetooth.AssociatedDevice
+import dev.bluetap.app.bluetooth.BondedDevice
 
 /** What a BlueTap widget should show. */
 sealed interface WidgetState {
     /** No device has been assigned to the widget. */
     data object NotConfigured : WidgetState
 
-    /** The assigned device's association still exists. */
-    data class Ready(val device: AssociatedDevice) : WidgetState
+    /** The assigned address is still in Android's bonded device list. */
+    data class Ready(val device: BondedDevice) : WidgetState
 
-    /** A device was assigned, but its association no longer exists or cannot be checked. */
-    data class Unavailable(val device: AssociatedDevice) : WidgetState
+    /** The device is no longer bonded, or the bonded list cannot currently be read. */
+    data class Unavailable(val device: BondedDevice) : WidgetState
 }
 
 /**
  * @param saved The device saved for the widget, if any.
- * @param currentAssociations BlueTap's current associations, or `null` if they
- *  cannot be determined (Companion Device Manager unavailable).
+ * @param bondedDevices Current paired devices, or `null` if permission, Bluetooth
+ *  state, or service availability prevents reading them. Saved configuration is retained.
  */
 fun resolveWidgetState(
-    saved: AssociatedDevice?,
-    currentAssociations: List<AssociatedDevice>?,
-): WidgetState = when {
-    saved == null -> WidgetState.NotConfigured
-    currentAssociations.orEmpty().any { it.isSameAssociationAs(saved) } -> WidgetState.Ready(saved)
-    else -> WidgetState.Unavailable(saved)
+    saved: BondedDevice?,
+    bondedDevices: List<BondedDevice>?,
+): WidgetState {
+    if (saved == null) return WidgetState.NotConfigured
+    val current = bondedDevices.orEmpty().firstOrNull {
+        it.macAddress.equals(saved.macAddress, ignoreCase = true)
+    }
+    return if (current != null) WidgetState.Ready(current) else WidgetState.Unavailable(saved)
 }

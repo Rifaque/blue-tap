@@ -1,8 +1,11 @@
 package dev.bluetap.app.ui
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,55 +20,76 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.bluetap.app.R
-import dev.bluetap.app.bluetooth.AssociatedDevice
-import dev.bluetap.app.bluetooth.AssociationOutcome
-import dev.bluetap.app.bluetooth.CompanionDeviceAssociator
+import dev.bluetap.app.bluetooth.BondedDevice
+import dev.bluetap.app.bluetooth.BondedDeviceProvider
+import dev.bluetap.app.bluetooth.BondedDeviceResult
 import kotlinx.coroutines.launch
 
-/**
- * Lists BlueTap's associated devices and lets the user associate a new one through
- * the system Companion Device Manager chooser.
- *
- * @param onDeviceSelected Called when an existing device is tapped; `null` makes the
- *  list read-only.
- * @param onDeviceAssociated Called after a new association has been created.
- */
+/** Lists paired Bluetooth devices. Widget configuration supplies the selection callback. */
 @Composable
 fun DeviceSetupScreen(
     title: String,
     description: String,
-    onDeviceSelected: (suspend (AssociatedDevice) -> Unit)?,
-    onDeviceAssociated: suspend (AssociatedDevice) -> Unit,
+    onDeviceSelected: (suspend (BondedDevice) -> Unit)?,
+    onDevicesRefreshed: suspend () -> Unit,
     footer: String? = null,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
-    val associator = remember { CompanionDeviceAssociator(context) }
-    var devices by remember { mutableStateOf(associator.currentAssociations().orEmpty()) }
+    val provider = remember(context) { BondedDeviceProvider(context) }
+    var result by remember { mutableStateOf(provider.currentDevices()) }
+    var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    val latestOnRefreshed by rememberUpdatedState(onDevicesRefreshed)
+    val refresh = {
+        result = provider.currentDevices()
+        scope.launch { latestOnRefreshed() }
+        Unit
+    }
+    val latestRefresh by rememberUpdatedState(refresh)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { latestRefresh() }
 
-    val startAssociation = rememberAssociationLauncher(associator) { outcome ->
-        message = when (outcome) {
-            is AssociationOutcome.Associated -> {
-                devices = associator.currentAssociations().orEmpty()
-                scope.launch { onDeviceAssociated(outcome.device) }
-                null
-            }
-            AssociationOutcome.Cancelled -> context.getString(R.string.setup_cancelled)
-            is AssociationOutcome.Failed -> outcome.message
-                ?.let { context.getString(R.string.setup_failed_with_reason, it) }
-                ?: context.getString(R.string.setup_failed)
+    LaunchedEffect(Unit) {
+        if (result == BondedDeviceResult.PermissionRequired && !permissionRequested) {
+            permissionRequested = true
+            permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+    }
+    // Reload after pairing/unpairing, toggling Bluetooth, or changing permission in Settings.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) latestRefresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val openSettings: (Intent) -> Unit = { intent ->
+        try {
+            context.startActivity(intent)
+            message = null
+        } catch (e: ActivityNotFoundException) {
+            message = context.getString(R.string.settings_unavailable)
         }
     }
 
@@ -80,42 +104,58 @@ fun DeviceSetupScreen(
         ) {
             Text(text = title, style = MaterialTheme.typography.headlineMedium)
             Text(text = description, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(R.string.devices_heading),
+                style = MaterialTheme.typography.titleMedium,
+            )
 
-            if (!associator.isSupported) {
-                Text(
-                    text = stringResource(R.string.setup_not_supported),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.devices_heading),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                if (devices.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.devices_empty),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            when (val current = result) {
+                is BondedDeviceResult.Available -> {
+                    if (current.devices.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.devices_empty),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    current.devices.forEach { device ->
+                        ListItem(
+                            headlineContent = { Text(device.name) },
+                            supportingContent = { Text(device.macAddress) },
+                            modifier = if (onDeviceSelected != null) {
+                                Modifier.clickable { scope.launch { onDeviceSelected(device) } }
+                            } else Modifier,
+                        )
+                    }
                 }
-                devices.forEach { device ->
-                    ListItem(
-                        headlineContent = { Text(device.name) },
-                        supportingContent = device.macAddress?.let { { Text(it) } },
-                        modifier = if (onDeviceSelected != null) {
-                            Modifier.clickable { scope.launch { onDeviceSelected(device) } }
-                        } else {
-                            Modifier
-                        },
-                    )
+                BondedDeviceResult.PermissionRequired -> {
+                    Text(stringResource(R.string.bluetooth_permission_required))
+                    Button(onClick = {
+                        permissionRequested = true
+                        permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                    }) {
+                        Text(stringResource(R.string.grant_bluetooth_permission))
+                    }
+                    Button(onClick = {
+                        openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")))
+                    }) {
+                        Text(stringResource(R.string.app_settings))
+                    }
                 }
-                Button(onClick = startAssociation) {
-                    Text(stringResource(R.string.add_device))
-                }
+                BondedDeviceResult.BluetoothOff -> Text(stringResource(R.string.bluetooth_off))
+                BondedDeviceResult.Unsupported -> Text(stringResource(R.string.bluetooth_unsupported))
+                BondedDeviceResult.Unavailable -> Text(stringResource(R.string.devices_unavailable))
             }
 
-            message?.let {
-                Text(text = it, color = MaterialTheme.colorScheme.error)
+            if (result != BondedDeviceResult.PermissionRequired &&
+                result != BondedDeviceResult.Unsupported
+            ) {
+                Button(onClick = refresh) { Text(stringResource(R.string.refresh_devices)) }
+                Button(onClick = { openSettings(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }) {
+                    Text(stringResource(R.string.bluetooth_settings))
+                }
             }
+            message?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
             footer?.let {
                 Text(
                     text = it,
@@ -123,41 +163,6 @@ fun DeviceSetupScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-    }
-}
-
-/**
- * Returns a function that starts Companion Device Manager association and reports
- * the result to [onOutcome]. On Android 12/12L it first asks for `BLUETOOTH_CONNECT`
- * (to read the device name); association continues whether or not it is granted.
- */
-@Composable
-private fun rememberAssociationLauncher(
-    associator: CompanionDeviceAssociator,
-    onOutcome: (AssociationOutcome) -> Unit,
-): () -> Unit {
-    val latestOnOutcome by rememberUpdatedState(onOutcome)
-    val chooserLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult(),
-    ) { result ->
-        latestOnOutcome(associator.parseResult(result.resultCode, result.data))
-    }
-    val startAssociation = {
-        associator.startAssociation(
-            onChooserReady = { chooserLauncher.launch(IntentSenderRequest.Builder(it).build()) },
-            onError = { latestOnOutcome(AssociationOutcome.Failed(it)) },
-        )
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { startAssociation() }
-
-    return {
-        if (associator.shouldRequestConnectPermission()) {
-            permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-        } else {
-            startAssociation()
         }
     }
 }

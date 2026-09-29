@@ -4,16 +4,20 @@
     <string name="main_widget_hint">To use a device, add a BlueTap widget to your home screen and choose the device for it. Connecting and disconnecting is not available yet.</string>
 
     <string name="config_title">Choose a device</string>
-    <string name="config_description">Pick the Bluetooth device this widget should control, or add a new one.</string>
+    <string name="config_description">Choose a paired Bluetooth device for this widget.</string>
 
-    <string name="devices_heading">Devices associated with BlueTap</string>
-    <string name="devices_empty">No devices yet.</string>
-    <string name="add_device">Add a device</string>
+    <string name="devices_heading">Paired Bluetooth devices</string>
+    <string name="devices_empty">No paired devices. Pair a device in Bluetooth settings, then return here.</string>
+    <string name="bluetooth_permission_required">Allow Nearby devices to see your paired Bluetooth devices. You can also enable this permission in app settings.</string>
+    <string name="grant_bluetooth_permission">Allow Nearby devices</string>
+    <string name="app_settings">App settings</string>
+    <string name="bluetooth_off">Turn on Bluetooth in settings to see your paired devices.</string>
+    <string name="bluetooth_unsupported">Bluetooth is not available on this device.</string>
+    <string name="devices_unavailable">Paired devices could not be read. Try refreshing the list.</string>
+    <string name="refresh_devices">Refresh devices</string>
+    <string name="bluetooth_settings">Bluetooth settings</string>
+    <string name="settings_unavailable">Settings could not be opened on this device.</string>
     <string name="unknown_device">Bluetooth device</string>
-    <string name="setup_cancelled">Device setup was cancelled.</string>
-    <string name="setup_failed">Device setup failed.</string>
-    <string name="setup_failed_with_reason">Device setup failed: %1$s</string>
-    <string name="setup_not_supported">This phone does not support companion device setup, which BlueTap needs.</string>
 
     <string name="widget_name">BlueTap</string>
     <string name="widget_description">Connect or disconnect a paired Bluetooth device with one tap</string>
