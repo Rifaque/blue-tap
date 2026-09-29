@@ -1,7 +1,7 @@
 package dev.bluetap.app.bluetooth
 
 /**
- * Connects and disconnects paired Bluetooth devices.
+ * Connects and disconnects associated Bluetooth devices.
  *
  * The UI and widget layers depend only on this interface, never on Android
  * Bluetooth APIs directly, so the platform-specific implementation can be
@@ -10,9 +10,9 @@ package dev.bluetap.app.bluetooth
  * No implementation exists yet.
  */
 interface BluetoothConnector {
-    suspend fun connect(device: PairedDevice): Result<Unit>
+    suspend fun connect(device: AssociatedDevice): Result<Unit>
 
-    suspend fun disconnect(device: PairedDevice): Result<Unit>
+    suspend fun disconnect(device: AssociatedDevice): Result<Unit>
 
-    suspend fun getConnectionState(device: PairedDevice): ConnectionState
+    suspend fun getConnectionState(device: AssociatedDevice): ConnectionState
 }

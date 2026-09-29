@@ -1,10 +1,25 @@
 <resources>
     <string name="app_name">BlueTap</string>
     <string name="app_description">BlueTap will provide one-tap home-screen widgets for connecting and disconnecting your paired Bluetooth audio devices.</string>
-    <string name="app_setup_coming_later">Bluetooth device configuration will be added in a later version.</string>
+    <string name="main_widget_hint">To use a device, add a BlueTap widget to your home screen and choose the device for it. Connecting and disconnecting is not available yet.</string>
+
+    <string name="config_title">Choose a device</string>
+    <string name="config_description">Pick the Bluetooth device this widget should control, or add a new one.</string>
+
+    <string name="devices_heading">Devices associated with BlueTap</string>
+    <string name="devices_empty">No devices yet.</string>
+    <string name="add_device">Add a device</string>
+    <string name="unknown_device">Bluetooth device</string>
+    <string name="setup_cancelled">Device setup was cancelled.</string>
+    <string name="setup_failed">Device setup failed.</string>
+    <string name="setup_failed_with_reason">Device setup failed: %1$s</string>
+    <string name="setup_not_supported">This phone does not support companion device setup, which BlueTap needs.</string>
 
     <string name="widget_name">BlueTap</string>
     <string name="widget_description">Connect or disconnect a paired Bluetooth device with one tap</string>
     <string name="widget_no_device">No device selected</string>
     <string name="widget_set_up_device">Set up device</string>
+    <string name="widget_status_not_available">Status not available yet</string>
+    <string name="widget_device_unavailable">Device unavailable</string>
+    <string name="widget_set_up_again">Set up again</string>
 </resources>

@@ -1,8 +1,11 @@
 package dev.bluetap.app.bluetooth
 
-import android.bluetooth.BluetoothProfile
-
-/** Connection state of a [PairedDevice], independent of any specific Android API. */
+/**
+ * Connection state of an [AssociatedDevice].
+ *
+ * Deliberately free of Android framework types; mapping from platform values
+ * belongs in the Android-specific [BluetoothConnector] implementation.
+ */
 enum class ConnectionState {
     Disconnected,
     Connecting,
@@ -17,17 +20,6 @@ enum class ConnectionState {
         Disconnected -> ToggleAction.Connect
         Connected -> ToggleAction.Disconnect
         Connecting, Disconnecting, Unknown -> null
-    }
-
-    companion object {
-        /** Maps a `BluetoothProfile.STATE_*` value to a [ConnectionState]. */
-        fun fromProfileState(state: Int): ConnectionState = when (state) {
-            BluetoothProfile.STATE_DISCONNECTED -> Disconnected
-            BluetoothProfile.STATE_CONNECTING -> Connecting
-            BluetoothProfile.STATE_CONNECTED -> Connected
-            BluetoothProfile.STATE_DISCONNECTING -> Disconnecting
-            else -> Unknown
-        }
     }
 }
 

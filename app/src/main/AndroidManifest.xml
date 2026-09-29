@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Device association uses the system Companion Device Manager. -->
+    <uses-feature
+        android:name="android.software.companion_device_setup"
+        android:required="true" />
+
+    <!--
+        Only needed on Android 12/12L, where Companion Device Manager does not return
+        the device name and BluetoothDevice.getName() requires this permission.
+    -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_CONNECT"
+        android:maxSdkVersion="32" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -14,6 +27,14 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
         </activity>
 
