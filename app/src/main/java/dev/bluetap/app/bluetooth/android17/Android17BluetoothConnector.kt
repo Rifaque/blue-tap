@@ -3,7 +3,7 @@ package dev.bluetap.app.bluetooth.android17
 import androidx.annotation.RequiresApi
 import dev.bluetap.app.bluetooth.BluetoothConnector
 import dev.bluetap.app.bluetooth.ConnectionState
-import dev.bluetap.app.bluetooth.PairedDevice
+import dev.bluetap.app.bluetooth.AssociatedDevice
 
 /**
  * Placeholder for the Android 17 (API 37) implementation of [BluetoothConnector].
@@ -17,13 +17,13 @@ import dev.bluetap.app.bluetooth.PairedDevice
 @RequiresApi(37)
 class Android17BluetoothConnector : BluetoothConnector {
 
-    override suspend fun connect(device: PairedDevice): Result<Unit> =
+    override suspend fun connect(device: AssociatedDevice): Result<Unit> =
         Result.failure(NotImplementedError(NOT_IMPLEMENTED))
 
-    override suspend fun disconnect(device: PairedDevice): Result<Unit> =
+    override suspend fun disconnect(device: AssociatedDevice): Result<Unit> =
         Result.failure(NotImplementedError(NOT_IMPLEMENTED))
 
-    override suspend fun getConnectionState(device: PairedDevice): ConnectionState =
+    override suspend fun getConnectionState(device: AssociatedDevice): ConnectionState =
         ConnectionState.Unknown
 
     private companion object {

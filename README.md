@@ -2,8 +2,8 @@
 
 One-tap Android home-screen widgets for connecting and disconnecting paired Bluetooth devices.
 
-> **Status: early development.** BlueTap does not connect to or disconnect from
-> Bluetooth devices yet. The app and widget currently show placeholder content only.
+> **Status: early development.** You can associate a Bluetooth device with BlueTap and
+> assign it to a widget, but BlueTap cannot connect to or disconnect from devices yet.
 
 ## What BlueTap will do
 
@@ -24,20 +24,34 @@ APIs, reflection, root, Shizuku, Accessibility services or vendor-specific proto
 
 ## What exists today
 
-- A minimal Jetpack Compose + Material 3 app screen.
-- A Jetpack Glance home-screen widget showing "No device selected" and a
-  "Set up device" button that opens the app.
+- **Device association** through Android's Companion Device Manager. BlueTap opens the
+  system device chooser, and the chosen device is associated with the app. BlueTap does
+  not pair, bond or connect to anything itself.
+- **Per-widget configuration.** Adding a BlueTap widget opens a setup screen where you
+  pick an associated device or add a new one. Each widget stores its own device, so
+  several widgets can point to different devices. Tapping a widget lets you change it.
+- **Widget states:** "No device selected", the assigned device's name, or
+  "Device unavailable" if its association was removed. The widget does not show a
+  connection status yet, because reading it is not implemented.
 - A `BluetoothConnector` interface and `ConnectionState` model that keep the UI and
   widget independent of Android Bluetooth classes.
 - A placeholder `Android17BluetoothConnector` that is **not implemented** and not used.
+
+### Permissions
+
+- `android.software.companion_device_setup` feature: required for device association.
+- `BLUETOOTH_CONNECT`, **Android 12/12L only**: needed there to read the chosen device's
+  name. Android 13+ gets the name from the association, so the permission is not
+  requested. BlueTap does not request location or scanning permissions.
 
 ## Project structure
 
 ```
 app/src/main/java/dev/bluetap/app/
-├── ui/          Main activity and Compose theme
-├── widget/      Glance widget and its receiver
-└── bluetooth/   BluetoothConnector interface, ConnectionState, PairedDevice
+├── ui/          Main activity, device setup screen and Compose theme
+├── widget/      Glance widget, receiver, configuration activity and per-widget storage
+└── bluetooth/   Companion Device Manager association, AssociatedDevice,
+                 BluetoothConnector interface and ConnectionState
     └── android17/   Placeholder for the future API 37 implementation
 ```
 
