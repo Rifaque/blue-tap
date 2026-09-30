@@ -44,6 +44,7 @@ class BondedDeviceTest {
             mapBondedDevice(address, null, null),
             BondedDevice(address.lowercase(), "OnePlus Buds 4"),
             mapBondedDevice(address, "OnePlus Buds 4", null),
+            BondedDevice(" $address ", "OnePlus Buds 4"),
         )
         val expected = listOf(BondedDevice(address, "OnePlus Buds 4"))
         assertEquals(expected, prepareBondedDevices(devices))

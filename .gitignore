@@ -39,3 +39,8 @@ google-services.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Local signing credentials and device investigation captures
+keystore.properties
+/screenshots/
+/diagnostics/

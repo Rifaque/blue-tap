@@ -7,15 +7,25 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Button
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,27 +51,35 @@ import dev.bluetap.app.bluetooth.BondedDevice
 import dev.bluetap.app.bluetooth.BondedDeviceProvider
 import dev.bluetap.app.bluetooth.BondedDeviceResult
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Lists paired Bluetooth devices. Widget configuration supplies the selection callback. */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun DeviceSetupScreen(
     title: String,
     description: String,
     onDeviceSelected: (suspend (BondedDevice) -> Unit)?,
-    onDevicesRefreshed: suspend () -> Unit,
+    onDevicesRefreshed: suspend () -> Boolean,
     footer: String? = null,
+    afterDevices: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val provider = remember(context) { BondedDeviceProvider(context) }
-    var result by remember { mutableStateOf(provider.currentDevices()) }
+    var result by remember { mutableStateOf<BondedDeviceResult>(BondedDeviceResult.Unavailable) }
+    var loading by remember { mutableStateOf(true) }
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val latestOnRefreshed by rememberUpdatedState(onDevicesRefreshed)
     val refresh = {
-        result = provider.currentDevices()
-        scope.launch { latestOnRefreshed() }
+        scope.launch {
+            result = withContext(Dispatchers.IO) { provider.currentDevices() }
+            loading = false
+            message = if (latestOnRefreshed()) null else context.getString(R.string.widget_refresh_failed)
+        }
         Unit
     }
     val latestRefresh by rememberUpdatedState(refresh)
@@ -69,7 +87,7 @@ fun DeviceSetupScreen(
         ActivityResultContracts.RequestPermission(),
     ) { latestRefresh() }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(result) {
         if (result == BondedDeviceResult.PermissionRequired && !permissionRequested) {
             permissionRequested = true
             permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
@@ -102,33 +120,36 @@ fun DeviceSetupScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(text = title, style = MaterialTheme.typography.headlineMedium)
-            Text(text = description, style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Surface(shape = RoundedCornerShape(15.dp), color = MaterialTheme.colorScheme.primary) {
+                    Icon(painterResource(R.drawable.ic_bluetap), null, Modifier.padding(10.dp).size(28.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(text = title, style = MaterialTheme.typography.headlineSmall)
+                    Text(text = description, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Text(
                 text = stringResource(R.string.devices_heading),
                 style = MaterialTheme.typography.titleMedium,
             )
 
-            when (val current = result) {
+            if (loading) Text(stringResource(R.string.loading_devices), style = MaterialTheme.typography.bodyMedium)
+            else when (val current = result) {
                 is BondedDeviceResult.Available -> {
                     if (current.devices.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.devices_empty),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        DeviceNotice(stringResource(R.string.no_paired_devices), stringResource(R.string.devices_empty))
                     }
                     current.devices.forEach { device ->
-                        ListItem(
-                            headlineContent = { Text(device.name) },
-                            supportingContent = { Text(device.macAddress) },
-                            modifier = if (onDeviceSelected != null) {
-                                Modifier.clickable { scope.launch { onDeviceSelected(device) } }
-                            } else Modifier,
-                        )
+                        DeviceRow(device, onClick = onDeviceSelected?.let { select ->
+                            { scope.launch { select(device) }; Unit }
+                        })
                     }
                 }
                 BondedDeviceResult.PermissionRequired -> {
-                    Text(stringResource(R.string.bluetooth_permission_required))
+                    DeviceNotice(stringResource(R.string.nearby_permission_title), stringResource(R.string.bluetooth_permission_required))
                     Button(onClick = {
                         permissionRequested = true
                         permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
@@ -142,19 +163,22 @@ fun DeviceSetupScreen(
                         Text(stringResource(R.string.app_settings))
                     }
                 }
-                BondedDeviceResult.BluetoothOff -> Text(stringResource(R.string.bluetooth_off))
-                BondedDeviceResult.Unsupported -> Text(stringResource(R.string.bluetooth_unsupported))
-                BondedDeviceResult.Unavailable -> Text(stringResource(R.string.devices_unavailable))
+                BondedDeviceResult.BluetoothOff -> DeviceNotice(stringResource(R.string.bluetooth_off_title), stringResource(R.string.bluetooth_off))
+                BondedDeviceResult.Unsupported -> DeviceNotice(stringResource(R.string.bluetooth_unavailable_title), stringResource(R.string.bluetooth_unsupported))
+                BondedDeviceResult.Unavailable -> DeviceNotice(stringResource(R.string.devices_unavailable_title), stringResource(R.string.devices_unavailable))
             }
 
             if (result != BondedDeviceResult.PermissionRequired &&
                 result != BondedDeviceResult.Unsupported
             ) {
-                Button(onClick = refresh) { Text(stringResource(R.string.refresh_devices)) }
-                Button(onClick = { openSettings(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }) {
-                    Text(stringResource(R.string.bluetooth_settings))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = refresh) { Text(stringResource(R.string.refresh)) }
+                    TextButton(onClick = { openSettings(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }) {
+                        Text(stringResource(R.string.bluetooth_settings))
+                    }
                 }
             }
+            afterDevices()
             message?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
             footer?.let {
                 Text(
@@ -163,6 +187,16 @@ fun DeviceSetupScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun DeviceNotice(title: String, body: String) {
+    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

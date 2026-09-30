@@ -6,8 +6,8 @@ import java.util.Locale
  * A Bluetooth device the user has associated with BlueTap through Android's
  * Companion Device Manager.
  *
- * This is BlueTap's own model, so the UI, widget and saved configuration do not
- * depend on Android Bluetooth or companion-device classes.
+ * Retained only for dormant CDM experiments and the future connector placeholder.
+ * Current UI and widget persistence use BondedDevice, not this association model.
  *
  * @property associationId The Companion Device Manager association ID. Android 13+
  *  always provides one; on Android 12/12L the platform exposes no IDs, so it is `null`.
@@ -26,8 +26,8 @@ data class AssociatedDevice(
     }
 
     /**
-     * Whether [other] represents the same physical device. A MAC address remains
-     * stable when Companion Device Manager creates another association ID.
+     * Whether two records expose the same address or ID. This cannot identify
+     * separate classic/BLE endpoints or resolve randomized addresses to a product.
      */
     fun isSameAssociationAs(other: AssociatedDevice): Boolean =
         if (macAddress != null && other.macAddress != null) {

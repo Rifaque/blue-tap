@@ -3,9 +3,10 @@ package dev.bluetap.app.bluetooth
 /**
  * Connects and disconnects associated Bluetooth devices.
  *
- * The UI and widget layers depend only on this interface, never on Android
- * Bluetooth APIs directly, so the platform-specific implementation can be
- * swapped (e.g. for [dev.bluetap.app.bluetooth.android17.Android17BluetoothConnector]).
+ * Dormant future boundary; no current UI or widget action calls it. Its legacy
+ * AssociatedDevice parameter must be revisited for bonded MAC identity when API 37
+ * integration resumes (see DEVELOPMENT_STATUS.md). Do not create a CDM association
+ * merely to adapt today's bonded-device model to this placeholder interface.
  *
  * No implementation exists yet.
  */

@@ -1,0 +1,5 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:padding="10dp" android:background="@drawable/widget_preview_background">
+<ImageView android:layout_width="84dp" android:layout_height="84dp" android:src="@drawable/art_earbuds" android:tint="@color/widget_preview_accent" android:importantForAccessibility="no"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/your_device" android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:textColor="@color/widget_preview_text" android:maxLines="2" android:ellipsize="end"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/tap_to_set_up" android:gravity="center" android:textSize="11sp" android:textColor="@color/widget_preview_secondary" android:maxLines="2" android:ellipsize="end"/>
+</LinearLayout>

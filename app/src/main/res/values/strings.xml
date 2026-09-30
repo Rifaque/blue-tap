@@ -1,29 +1,39 @@
 <resources>
+    <string name="cancel">Cancel</string>
+    <string name="loading_devices">Loading paired devices…</string>
+    <string name="save_widget">Save widget</string>
+    <string name="saving">Saving…</string>
+    <string name="change_device">Change device</string>
+    <string name="choose_device">Choose device</string>
+    <string name="refresh">Refresh</string>
+    <string name="widget_refresh_failed">Could not refresh all widgets. Try Refresh again.</string>
+    <string name="widget_save_failed">Could not save the widget. Try again.</string>
+    <string name="artwork_import_failed">Could not load that image. Choose a readable image and try again.</string>
+    <string name="artwork_remove_failed">Could not remove the image. Try again.</string>
+    <string name="artwork_refresh_failed">The device image was updated. Open BlueTap and tap Refresh to retry updating the widgets.</string>
+    <string name="no_image_picker">No image picker is available on this device.</string>
+    <string name="no_paired_devices">No paired devices</string>
+    <string name="nearby_permission_title">Nearby devices permission</string>
+    <string name="bluetooth_off_title">Bluetooth is off</string>
+    <string name="bluetooth_unavailable_title">Bluetooth unavailable</string>
+    <string name="devices_unavailable_title">Could not load devices</string>
+    <string name="your_device">Your device</string>
+    <string name="tap_to_set_up">Tap to set up</string>
     <string name="app_name">BlueTap</string>
-    <string name="app_description">BlueTap will provide one-tap home-screen widgets for connecting and disconnecting your paired Bluetooth audio devices.</string>
-    <string name="main_widget_hint">To use a device, add a BlueTap widget to your home screen and choose the device for it. Connecting and disconnecting is not available yet.</string>
 
-    <string name="config_title">Choose a device</string>
-    <string name="config_description">Choose a paired Bluetooth device for this widget.</string>
 
-    <string name="devices_heading">Paired Bluetooth devices</string>
-    <string name="devices_empty">No paired devices. Pair a device in Bluetooth settings, then return here.</string>
+    <string name="devices_heading">Paired devices</string>
+    <string name="devices_empty">Pair a device in Bluetooth settings, then return here.</string>
     <string name="bluetooth_permission_required">Allow Nearby devices to see your paired Bluetooth devices. You can also enable this permission in app settings.</string>
     <string name="grant_bluetooth_permission">Allow Nearby devices</string>
     <string name="app_settings">App settings</string>
     <string name="bluetooth_off">Turn on Bluetooth in settings to see your paired devices.</string>
     <string name="bluetooth_unsupported">Bluetooth is not available on this device.</string>
     <string name="devices_unavailable">Paired devices could not be read. Try refreshing the list.</string>
-    <string name="refresh_devices">Refresh devices</string>
     <string name="bluetooth_settings">Bluetooth settings</string>
     <string name="settings_unavailable">Settings could not be opened on this device.</string>
     <string name="unknown_device">Bluetooth device</string>
 
     <string name="widget_name">BlueTap</string>
-    <string name="widget_description">Connect or disconnect a paired Bluetooth device with one tap</string>
-    <string name="widget_no_device">No device selected</string>
-    <string name="widget_set_up_device">Set up device</string>
-    <string name="widget_status_not_available">Status not available yet</string>
-    <string name="widget_device_unavailable">Device unavailable</string>
-    <string name="widget_set_up_again">Set up again</string>
+    <string name="widget_description">A customizable widget for your paired Bluetooth device</string>
 </resources>
