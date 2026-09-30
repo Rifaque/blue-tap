@@ -7,11 +7,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.ui.res.stringResource
-import dev.bluetap.app.R
 import dev.bluetap.app.bluetooth.BondedDevice
 import dev.bluetap.app.ui.BlueTapTheme
-import dev.bluetap.app.ui.DeviceSetupScreen
+import dev.bluetap.app.ui.WidgetEditorScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * App widget configuration activity. Opened by the launcher when a BlueTap widget
@@ -42,24 +42,27 @@ class WidgetConfigActivity : ComponentActivity() {
         wasConfigured = WidgetConfigStore.from(this).load(appWidgetId) != null
 
         enableEdgeToEdge()
+        val store = WidgetConfigStore.from(this)
         setContent {
-            BlueTapTheme {
-                DeviceSetupScreen(
-                    title = stringResource(R.string.config_title),
-                    description = stringResource(R.string.config_description),
-                    onDeviceSelected = ::assignDevice,
-                    onDevicesRefreshed = { refreshAllWidgets(this@WidgetConfigActivity) },
+            BlueTapTheme(dynamicColor = getSharedPreferences("app_settings", MODE_PRIVATE).safeBoolean("dynamic_color", false)) {
+                WidgetEditorScreen(
+                    initialDevice = store.load(appWidgetId),
+                    initialAppearance = store.loadAppearance(appWidgetId),
+                    onSave = ::assignDevice,
+                    onCancel = { finish() },
                 )
             }
         }
     }
 
-    private suspend fun assignDevice(device: BondedDevice) {
-        WidgetConfigStore.from(this).save(appWidgetId, device)
-        refreshWidget(this, appWidgetId)
+    private suspend fun assignDevice(device: BondedDevice, appearance: WidgetAppearance) {
+        check(isBlueTapWidget(appWidgetId)) { "Widget was removed while editing" }
+        withContext(Dispatchers.IO) { WidgetConfigStore.from(this@WidgetConfigActivity).saveConfiguration(appWidgetId, device, appearance) }
         configured = true
         setResult(RESULT_OK, resultIntent())
-        finish()
+        // A launcher can remove the widget between saving and rendering. The committed save
+        // is still successful; never report it as an unsaved editor change.
+        try { refreshWidget(this, appWidgetId) } finally { finish() }
     }
 
     override fun onDestroy() {

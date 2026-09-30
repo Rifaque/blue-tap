@@ -29,7 +29,8 @@ class BondedDeviceProvider(private val context: Context) {
             val devices = bonded.map { device ->
                 val name = device.name
                 val alias = if (name.isNullOrBlank()) device.alias else null
-                mapBondedDevice(device.address, name, alias)
+                val mapped = mapBondedDevice(device.address, name, alias)
+                mapped.copy(kind = deviceKind(device.bluetoothClass?.deviceClass, mapped.name))
             }
             // Bluetooth can turn off during the read, making an empty list misleading.
             if (!adapter.isEnabled) return BondedDeviceResult.BluetoothOff

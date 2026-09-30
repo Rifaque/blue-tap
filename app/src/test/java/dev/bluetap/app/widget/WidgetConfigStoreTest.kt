@@ -7,6 +7,39 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class WidgetConfigStoreTest {
+    @Test fun completedSaveStoresDeviceAndAppearanceTogetherAndLeavesOtherWidgetAlone() {
+        val prefs = FakeSharedPreferences()
+        val store = WidgetConfigStore(prefs)
+        val a = BondedDevice("AA:BB:CC:DD:EE:FF", "Buds")
+        val style = appearanceForPreset(WidgetPreset.OLED).copy(showBattery = false)
+        store.saveConfiguration(1, a, style)
+        store.saveConfiguration(2, a.copy(name = "Other"), WidgetAppearance())
+        assertEquals(a, store.load(1)); assertEquals(style, store.loadAppearance(1))
+        assertEquals("Other", store.load(2)?.name)
+        assertEquals(WidgetAppearance(), store.loadAppearance(2))
+    }
+    @Test fun malformedIdentityIsRecoverableAndInvalidAddressIsUnavailable() {
+        prefs.edit().putInt("widget_42_mac_address", 123).apply()
+        assertNull(store.load(42))
+        prefs.edit().putString("widget_42_mac_address", "invalid-old-address").putBoolean("widget_42_name", true).apply()
+        val saved = store.load(42)!!
+        assertEquals("INVALID-OLD-ADDRESS", saved.name)
+        assertEquals(WidgetState.Unavailable(saved), resolveWidgetState(saved, listOf(buds)))
+    }
+    @Test fun launcherIdRemappingPreservesOverlappingAssignmentsAndAllAppearanceKeys() {
+        store.saveConfiguration(1, buds, appearanceForPreset(WidgetPreset.DOT_MONO))
+        store.saveConfiguration(2, headphones, WidgetAppearance(showBattery = false))
+        prefs.edit().putBoolean("widget_2_legacy_flag", true).apply()
+        store.save(10, buds)
+        store.remapWidgets(intArrayOf(1, 2), intArrayOf(2, 3))
+        assertNull(store.load(1))
+        assertEquals(buds, store.load(2)); assertEquals(headphones, store.load(3))
+        assertEquals(WidgetPreset.DOT_MONO, store.loadAppearance(2).preset)
+        assertFalse(store.loadAppearance(3).showBattery)
+        assertFalse(prefs.contains("widget_2_legacy_flag"))
+        assertEquals(true, prefs.getBoolean("widget_3_legacy_flag", false))
+        assertEquals(buds, store.load(10))
+    }
     private val prefs = FakeSharedPreferences()
     private val store = WidgetConfigStore(prefs)
     private val buds = BondedDevice("88:92:CC:EF:B9:56", "OnePlus Buds 4")

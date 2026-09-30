@@ -3,7 +3,7 @@ package dev.bluetap.app.bluetooth
 import java.util.Locale
 
 /** A paired Bluetooth device, identified by its Bluetooth address. */
-data class BondedDevice(val macAddress: String, val name: String) {
+data class BondedDevice(val macAddress: String, val name: String, val kind: DeviceKind = DeviceKind.GENERIC) : java.io.Serializable {
     init {
         require(macAddress.isNotBlank()) { "A bonded device needs a Bluetooth address" }
         require(name.isNotBlank()) { "A bonded device needs a display name" }
@@ -21,7 +21,7 @@ internal fun mapBondedDevice(address: String, name: String?, alias: String?): Bo
 
 /** Prefer named entries when duplicates exist, then display devices alphabetically. */
 internal fun prepareBondedDevices(devices: List<BondedDevice>): List<BondedDevice> = devices
-    .map { it.copy(macAddress = it.macAddress.uppercase(Locale.ROOT)) }
+    .map { it.copy(macAddress = it.macAddress.trim().uppercase(Locale.ROOT)) }
     .sortedWith(compareBy<BondedDevice> { it.name.equals(it.macAddress, ignoreCase = true) }
         .thenBy { it.name.lowercase(Locale.ROOT) })
     .distinctBy { it.macAddress }
